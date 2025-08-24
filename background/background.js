@@ -279,6 +279,12 @@ class HideBoxBackground {
                 sendResponse({ pong: true });
                 break;
 
+            case 'ensureContentScript':
+                this.ensureContentScriptInjected(message.tabId)
+                    .then(() => sendResponse({ success: true }))
+                    .catch(error => sendResponse({ error: error.message }));
+                return true; // Keep message channel open
+
             case 'saveSelectedElements':
                 this.saveElementRules(message.rules, sender.tab)
                     .then(result => sendResponse(result))

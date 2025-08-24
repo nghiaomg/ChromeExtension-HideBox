@@ -5,13 +5,15 @@
 ## 🎯 Tính năng chính
 
 - **🎯 Chế độ chọn phần tử**: Bật/tắt bằng icon popup hoặc phím tắt `Alt+X`
-- **👁️ Ẩn/hiện ngay lập tức**: Phần tử được chọn sẽ ẩn ngay, có thể undo trước khi lưu
+- **👁️ Lưu và ẩn tức thì**: Phần tử được chọn sẽ lưu và ẩn ngay lập tức theo domain
 - **🌐 Lưu theo domain**: Cấu hình được lưu theo hostname, không phụ thuộc đường dẫn
 - **🔄 Áp dụng tự động**: Tự động ẩn phần tử khi truy cập bất kỳ trang nào trong cùng domain
+- **🛡️ Iframe Protection**: Chặn redirect khi click iframe quảng cáo, cho phép ẩn iframe an toàn
 - **⚙️ Quản lý danh sách**: Popup cho phép bật/tắt, sửa ghi chú, xóa từng rule
 - **📤📥 Xuất/Nhập**: Backup và restore toàn bộ cấu hình
 - **😴 Tạm thời vô hiệu**: Snooze domain trong 5/15/60 phút
 - **🌍 Hỗ trợ subdomain**: Tuỳ chọn áp dụng cho tất cả subdomain
+- **⌨️ Phím tắt toàn diện**: ESC để thoát, Ctrl+U để undo, với multiple event listeners
 
 ## 🚀 Cài đặt
 
@@ -22,8 +24,8 @@
 
 1. **Clone repository**:
    ```bash
-   git clone https://github.com/nghiaomg/HideBox.git
-   cd HideBox
+   git clone https://github.com/nghiaomg/ChromeExtension-HideBox.git
+   cd ChromeExtension-HideBox
    ```
 
 2. **Mở Chrome Extension Manager**:
@@ -32,7 +34,7 @@
 
 3. **Load extension**:
    - Click **Load unpacked**
-   - Chọn thư mục `HideBox`
+   - Chọn thư mục `ChromeExtension-HideBox`
    - Extension sẽ xuất hiện trong thanh công cụ
 
 ## 📖 Hướng dẫn sử dụng
@@ -45,13 +47,14 @@
 
 2. **Chọn phần tử**:
    - Di chuột để highlight phần tử
-   - **Click** để chọn phần tử
+   - **Click** để chọn và lưu ngay lập tức
    - **Shift+Click** để chọn phần tử cha
-   - **Ctrl+Click** để bỏ chọn
+   - **Ctrl+Click** để bỏ chọn và xóa khỏi storage
+   - **🛡️ Iframe**: Click vào iframe quảng cáo sẽ được chặn redirect và chọn an toàn
 
-3. **Lưu cấu hình**:
-   - Bấm **Enter** để lưu tất cả phần tử đã chọn
-   - Hoặc **Escape** để hủy
+3. **Thoát chế độ chọn**:
+   - Bấm **Escape** để thoát chế độ chọn
+   - Hoặc click icon HideBox lần nữa
 
 ### Quản lý rules
 
@@ -65,8 +68,8 @@
 - `Alt+X`: Bật/tắt chế độ chọn
 - `Alt+Z`: Snooze domain hiện tại
 - `Ctrl+U`: Undo selection gần nhất (trong chế độ chọn)
-- `Enter`: Lưu selections (trong chế độ chọn)
-- `Escape`: Thoát chế độ chọn
+- `Escape`: Thoát chế độ chọn (với multiple event listeners để đảm bảo luôn hoạt động)
+- `Enter`: Thoát chế độ chọn (vì phần tử đã được lưu tự động)
 
 ## ⚙️ Cấu hình nâng cao
 
@@ -105,6 +108,15 @@ Extension tạo CSS selector ổn định theo thứ tự ưu tiên:
 - **Local Storage**: Lưu trạng thái snooze tạm thời
 - **Format**: JSON có thể đọc được và backup
 
+### 🛡️ Iframe Protection System
+Extension có hệ thống bảo vệ toàn diện chống iframe redirect:
+
+1. **Global Protection**: Khi bật selection mode, tất cả iframe được cover bởi transparent overlay
+2. **Event Blocking**: `stopImmediatePropagation()` chặn triệt để event propagation
+3. **Visual Feedback**: Red border animation khi click iframe để xác nhận đã chặn redirect
+4. **Auto Cleanup**: Tự động restore iframe functionality khi tắt selection mode
+5. **Safe Selection**: Iframe được chọn như element bình thường mà không trigger redirect
+
 ## 🛡️ Bảo mật & Quyền riêng tư
 
 - **Không thu thập dữ liệu**: Chỉ lưu selectors do người dùng tạo
@@ -121,29 +133,41 @@ Extension tạo CSS selector ổn định theo thứ tự ưu tiên:
 - **Nguyên nhân**: Selector không ổn định do thay đổi DOM
 - **Giải pháp**: Chọn lại phần tử với selector tốt hơn (ưu tiên ID, data-attributes)
 
-### Không highlight được
-- **Nguyên nhân**: Trang có overlay che phủ
-- **Giải pháp**: Thử refresh trang hoặc sử dụng Shift+Click
+### Iframe redirect khi click
+- **Nguyên nhân**: Iframe quảng cáo có event listener redirect
+- **Giải pháp**: ✅ **Đã fix** - Extension tự động chặn redirect và bảo vệ tất cả iframe khi ở selection mode
+
+### Phím ESC không hoạt động
+- **Nguyên nhân**: Trang web chặn hoặc override keyboard events
+- **Giải pháp**: ✅ **Đã fix** - Multiple event listeners (document, window, body) + global backup listener
+
+### Popup không kết nối được với content script
+- **Nguyên nhân**: Content script chưa được inject khi popup load
+- **Giải pháp**: ✅ **Đã fix** - Auto-inject content script với ping/pong mechanism
 
 ### SPA không hoạt động
 - **Nguyên nhân**: Route thay đổi client-side
-- **Giải pháp**: Extension tự động detect và áp lại rules
+- **Giải pháp**: Extension tự động detect và áp lại rules với MutationObserver
 
 ### Performance
 - Extension được tối ưu để không ảnh hưởng hiệu năng trang
-- Giới hạn số lượng rules và sử dụng CSS thay vì JavaScript để ẩn
+- Sử dụng CSS `display: none !important` thay vì JavaScript manipulation
+- Debounced MutationObserver để tránh excessive processing
 
 ## 📝 Changelog
 
-### v1.0.0 (2024-XX-XX)
+### v1.0.0 (2025-08-25)
 - 🎉 Phiên bản đầu tiên
-- ✨ Chế độ chọn phần tử với overlay
-- 🎯 Tạo selector ổn định
-- 💾 Lưu trữ theo domain
-- 🔄 Auto-apply với MutationObserver
-- 📤📥 Xuất/nhập cấu hình
-- 😴 Snooze domain
-- ⌨️ Phím tắt
+- ✨ Chế độ chọn phần tử với overlay và tooltip thông tin
+- 🎯 Tạo selector ổn định với 5 strategies (ID → attributes → classes → structure → position)
+- 💾 Lưu tức thì theo domain (click = save ngay lập tức)
+- 🔄 Auto-apply với MutationObserver cho SPA support
+- 🛡️ **Iframe Protection**: Chặn redirect iframe quảng cáo hoàn toàn
+- 📤📥 Xuất/nhập cấu hình JSON với metadata
+- 😴 Snooze domain với auto-cleanup
+- ⌨️ **Enhanced Keyboard**: Multiple ESC listeners + global backup
+- 🔗 **Connection Reliability**: Auto-inject content script với ping/pong
+- 🎨 Modern UI với animations và visual feedback
 
 ## 🤝 Đóng góp
 
@@ -159,18 +183,28 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## 🆘 Hỗ trợ
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/HideBox/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/HideBox/discussions)
+- **Issues**: [GitHub Issues](https://github.com/nghiaomg/ChromeExtension-HideBox/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/nghiaomg/ChromeExtension-HideBox/discussions)
 - **Email**: your.email@example.com
 
 ## ⭐ Roadmap
 
+### 🔥 Đã hoàn thành v1.0.0
+- [x] **Iframe Protection**: Chặn redirect iframe quảng cáo
+- [x] **Enhanced ESC handling**: Multiple listeners để đảm bảo luôn hoạt động
+- [x] **Auto-save on click**: Lưu tức thì khi chọn phần tử
+- [x] **Connection reliability**: Auto-inject content script
+- [x] **Visual feedback**: Animations và notifications
+
+### 🚀 Tính năng tương lai
 - [ ] **Smart Selector Scoring**: Tính điểm độ ổn định cho selector
-- [ ] **Rule Templates**: Template có sẵn cho các site phổ biến
+- [ ] **Rule Templates**: Template có sẵn cho các site phổ biến (YouTube ads, Facebook sidebar, etc.)
 - [ ] **Responsive Rules**: Ẩn theo kích thước màn hình
 - [ ] **Advanced Filtering**: Lọc theo text content, thuộc tính
-- [ ] **Rule Groups**: Nhóm rules theo chức năng
+- [ ] **Rule Groups**: Nhóm rules theo chức năng (ads, social, navigation)
 - [ ] **Cross-browser Support**: Hỗ trợ Firefox, Edge
+- [ ] **Cloud Sync**: Đồng bộ rules qua Google Drive/Dropbox
+- [ ] **Rule Sharing**: Chia sẻ rules giữa users
 
 ---
 

@@ -150,10 +150,13 @@ class HideBoxPopup {
             // Notify content script to update rules
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             if (tab?.id) {
+                await this.ensureContentScriptReady(tab.id);
                 chrome.tabs.sendMessage(tab.id, {
                     action: 'updateRules',
                     domain: this.currentDomain,
                     rules: this.domainRules.filter(rule => rule.enabled)
+                }).catch(error => {
+                    console.warn('Failed to send rules update:', error);
                 });
             }
         } catch (error) {
@@ -167,11 +170,17 @@ class HideBoxPopup {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             if (!tab?.id) return;
 
+            // Ensure content script is injected before sending message
+            await this.ensureContentScriptReady(tab.id);
+
             this.isSelectionMode = !this.isSelectionMode;
             
-            chrome.tabs.sendMessage(tab.id, {
+            const response = await chrome.tabs.sendMessage(tab.id, {
                 action: 'toggleSelectionMode',
                 enabled: this.isSelectionMode
+            }).catch(error => {
+                console.warn('Failed to send toggle message:', error);
+                return null;
             });
 
             this.updateSelectionButton();
@@ -181,19 +190,51 @@ class HideBoxPopup {
         }
     }
 
+    async ensureContentScriptReady(tabId) {
+        try {
+            // Test if content script is already injected
+            const response = await chrome.tabs.sendMessage(tabId, { action: 'ping' }).catch(() => null);
+            if (response) {
+                return true; // Already ready
+            }
+        } catch (error) {
+            // Content script not ready, request injection via background
+        }
+
+        // Request background to inject content script
+        try {
+            await chrome.runtime.sendMessage({
+                action: 'ensureContentScript',
+                tabId: tabId
+            });
+            
+            // Wait a bit for injection to complete
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Test again
+            const response = await chrome.tabs.sendMessage(tabId, { action: 'ping' }).catch(() => null);
+            return !!response;
+        } catch (error) {
+            console.warn('Failed to ensure content script ready:', error);
+            return false;
+        }
+    }
+
     async checkSelectionMode() {
         try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             if (!tab?.id) return;
 
-            chrome.tabs.sendMessage(tab.id, {
+            await this.ensureContentScriptReady(tab.id);
+
+            const response = await chrome.tabs.sendMessage(tab.id, {
                 action: 'getSelectionMode'
-            }, (response) => {
-                if (response && typeof response.enabled === 'boolean') {
-                    this.isSelectionMode = response.enabled;
-                    this.updateSelectionButton();
-                }
-            });
+            }).catch(() => null);
+
+            if (response && typeof response.enabled === 'boolean') {
+                this.isSelectionMode = response.enabled;
+                this.updateSelectionButton();
+            }
         } catch (error) {
             console.error('Error checking selection mode:', error);
         }
@@ -231,9 +272,12 @@ class HideBoxPopup {
             // Notify content script
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             if (tab?.id) {
+                await this.ensureContentScriptReady(tab.id);
                 chrome.tabs.sendMessage(tab.id, {
                     action: 'snoozeDomain',
                     minutes: minutes
+                }).catch(error => {
+                    console.warn('Failed to notify content script about snooze:', error);
                 });
             }
             

@@ -95,6 +95,10 @@ class HideBoxContentScript {
 
     handleMessage(message, sender, sendResponse) {
         switch (message.action) {
+            case 'ping':
+                sendResponse({ pong: true });
+                break;
+                
             case 'toggleSelectionMode':
                 this.toggleSelectionMode(message.enabled);
                 sendResponse({ success: true });
@@ -152,6 +156,9 @@ class HideBoxContentScript {
         window.addEventListener('keydown', this.handleKeyDown, true);
         document.body.addEventListener('keydown', this.handleKeyDown, true);
         
+        // Block iframe interactions globally during selection mode
+        this.blockAllIframes();
+        
         this.createOverlay();
         this.createTooltip();
         this.createIndicator();
@@ -171,6 +178,9 @@ class HideBoxContentScript {
         document.removeEventListener('keydown', this.handleKeyDown, true);
         window.removeEventListener('keydown', this.handleKeyDown, true);
         document.body.removeEventListener('keydown', this.handleKeyDown, true);
+        
+        // Restore iframe interactions
+        this.unblockAllIframes();
         
         this.removeOverlay();
         this.removeTooltip();
@@ -202,9 +212,23 @@ class HideBoxContentScript {
         
         event.preventDefault();
         event.stopPropagation();
+        event.stopImmediatePropagation();
         
         const element = event.target;
         if (!element || this.isHideBoxElement(element)) return;
+        
+        // Special handling for iframes to prevent redirect
+        if (element.tagName === 'IFRAME') {
+            this.handleIframeClick(element, event);
+            return;
+        }
+        
+        // Check if clicking inside an iframe (need to select the iframe itself)
+        const iframe = element.closest('iframe');
+        if (iframe) {
+            this.handleIframeClick(iframe, event);
+            return;
+        }
         
         if (event.shiftKey) {
             this.selectParentElement(element);
@@ -277,6 +301,61 @@ class HideBoxContentScript {
         
         console.log('HideBox: Selected and saved element:', rule.selector);
         this.showNotification(`Đã ẩn và lưu: ${rule.note}`);
+    }
+
+    handleIframeClick(iframe, event) {
+        // Create a temporary overlay over the iframe to block interaction
+        this.createIframeBlocker(iframe);
+        
+        // Treat iframe as a regular element to select
+        if (event.shiftKey) {
+            this.selectParentElement(iframe);
+        } else if (event.ctrlKey || event.metaKey) {
+            this.unselectElement(iframe);
+        } else {
+            this.selectElement(iframe);
+        }
+        
+        // Show notification about iframe selection
+        this.showNotification('Đã chọn iframe - không có redirect');
+    }
+
+    createIframeBlocker(iframe) {
+        // Create a temporary transparent overlay to block iframe clicks
+        const blocker = document.createElement('div');
+        blocker.className = 'hidebox-iframe-blocker';
+        blocker.style.cssText = `
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: rgba(255, 0, 0, 0.1) !important;
+            z-index: 999999 !important;
+            pointer-events: none !important;
+            border: 2px solid #dc3545 !important;
+            box-sizing: border-box !important;
+        `;
+        
+        // Position relative to iframe
+        const rect = iframe.getBoundingClientRect();
+        const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+        const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+        
+        blocker.style.left = (rect.left + scrollX) + 'px';
+        blocker.style.top = (rect.top + scrollY) + 'px';
+        blocker.style.width = rect.width + 'px';
+        blocker.style.height = rect.height + 'px';
+        blocker.style.position = 'absolute';
+        
+        document.body.appendChild(blocker);
+        
+        // Remove blocker after short time
+        setTimeout(() => {
+            if (blocker.parentNode) {
+                blocker.remove();
+            }
+        }, 2000);
     }
 
     selectParentElement(element) {
@@ -445,7 +524,7 @@ class HideBoxContentScript {
                 <li class="hidebox-instructions-item"><span class="hidebox-instructions-key">Ctrl+U</span> hoàn tác • <span class="hidebox-instructions-key">ESC</span> thoát</li>
             </ul>
             <div style="margin-top: 8px; font-size: 11px; opacity: 0.8;">
-                💡 Bấm <span class="hidebox-instructions-key">ESC</span> bất cứ lúc nào để thoát
+                💡 <span class="hidebox-instructions-key">ESC</span> để thoát • 🛡️ Iframe được bảo vệ khỏi redirect
             </div>
         `;
         document.body.appendChild(this.instructions);
@@ -579,6 +658,71 @@ class HideBoxContentScript {
         console.log(`HideBox: Domain snoozed for ${minutes} minutes`);
         
         this.showNotification(`Domain đã được tạm ngưng ${minutes} phút`);
+    }
+
+    blockAllIframes() {
+        // Add a transparent overlay to all iframes to prevent interaction
+        const iframes = document.querySelectorAll('iframe');
+        iframes.forEach(iframe => {
+            const blocker = document.createElement('div');
+            blocker.className = 'hidebox-iframe-protection';
+            blocker.style.cssText = `
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                background: transparent !important;
+                z-index: 999998 !important;
+                pointer-events: auto !important;
+                cursor: crosshair !important;
+            `;
+            
+            // Position iframe in a container if not already
+            if (iframe.style.position !== 'absolute' && iframe.style.position !== 'relative') {
+                iframe.style.position = 'relative';
+            }
+            
+            // Add blocker as next sibling
+            if (iframe.parentNode) {
+                // Create wrapper if iframe doesn't have relative positioning context
+                const wrapper = document.createElement('div');
+                wrapper.style.cssText = `
+                    position: relative !important;
+                    display: inline-block !important;
+                    width: ${iframe.offsetWidth}px !important;
+                    height: ${iframe.offsetHeight}px !important;
+                `;
+                
+                iframe.parentNode.insertBefore(wrapper, iframe);
+                wrapper.appendChild(iframe);
+                wrapper.appendChild(blocker);
+                
+                // Store reference for cleanup
+                iframe.setAttribute('data-hidebox-wrapped', 'true');
+            }
+        });
+        
+        console.log(`HideBox: Blocked ${iframes.length} iframes from interaction`);
+    }
+
+    unblockAllIframes() {
+        // Remove all iframe protection overlays
+        const protections = document.querySelectorAll('.hidebox-iframe-protection');
+        protections.forEach(protection => protection.remove());
+        
+        // Unwrap iframes that were wrapped
+        const wrappedIframes = document.querySelectorAll('iframe[data-hidebox-wrapped="true"]');
+        wrappedIframes.forEach(iframe => {
+            const wrapper = iframe.parentNode;
+            if (wrapper && wrapper.classList && !wrapper.classList.contains('hidebox-iframe-protection')) {
+                wrapper.parentNode.insertBefore(iframe, wrapper);
+                wrapper.remove();
+                iframe.removeAttribute('data-hidebox-wrapped');
+            }
+        });
+        
+        console.log('HideBox: Restored iframe interactions');
     }
 
     showNotification(message) {
