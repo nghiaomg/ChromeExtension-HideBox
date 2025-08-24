@@ -1,0 +1,44 @@
+{
+  "name": "hidebox-chrome-extension",
+  "version": "1.0.0",
+  "description": "Chrome Extension để ẩn các phần tử DOM không mong muốn theo domain",
+  "scripts": {
+    "build": "echo 'Building extension...' && npm run validate",
+    "validate": "echo 'Validating manifest...' && node -e \"console.log('Manifest validation:', JSON.parse(require('fs').readFileSync('manifest.json', 'utf8')).name)\"",
+    "pack": "echo 'Creating extension package...' && zip -r hidebox-extension.zip . -x '*.git*' 'node_modules/*' 'package*.json' '*.md' 'icons/create_icons.py'",
+    "dev": "echo 'Extension ready for development. Load in Chrome://extensions/'",
+    "lint": "echo 'Linting JavaScript files...'",
+    "test": "echo 'No tests specified yet'"
+  },
+  "keywords": [
+    "chrome-extension",
+    "dom-manipulation",
+    "element-hiding",
+    "ad-blocker",
+    "content-blocker",
+    "web-scraping-helper"
+  ],
+  "author": "HideBox Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/HideBox.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/HideBox/issues"
+  },
+  "homepage": "https://github.com/yourusername/HideBox#readme",
+  "devDependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "manifest": {
+    "version": "3",
+    "permissions": [
+      "activeTab",
+      "scripting", 
+      "storage",
+      "tabs"
+    ]
+  }
+}

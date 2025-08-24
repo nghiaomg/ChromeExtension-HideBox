@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HideBox</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div id="app">
+        <header class="header">
+            <div class="logo">
+                <img src="../icons/icon32.png" alt="HideBox" class="logo-icon">
+                <h1 class="title">HideBox</h1>
+            </div>
+            <div class="domain-info">
+                <span id="current-domain" class="domain-text">Đang tải...</span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- Điều khiển chính -->
+            <section class="controls">
+                <button id="toggle-selection" class="btn btn-primary">
+                    <span class="btn-icon">🎯</span>
+                    <span class="btn-text">Bật chế độ chọn</span>
+                </button>
+                
+                <div class="control-buttons">
+                    <button id="snooze-btn" class="btn btn-secondary" title="Tạm ngưng cho domain này">
+                        <span class="btn-icon">😴</span>
+                        <span class="btn-text">Snooze</span>
+                    </button>
+                    
+                    <div class="dropdown" id="snooze-dropdown">
+                        <button data-minutes="5">5 phút</button>
+                        <button data-minutes="15">15 phút</button>
+                        <button data-minutes="60">60 phút</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Danh sách rules -->
+            <section class="rules-section">
+                <div class="section-header">
+                    <h2>Phần tử đã ẩn</h2>
+                    <div class="rule-count">
+                        <span id="rule-count">0</span> rules
+                    </div>
+                </div>
+                
+                <div id="rules-list" class="rules-list">
+                    <!-- Sẽ được populate bởi JavaScript -->
+                </div>
+                
+                <div id="empty-state" class="empty-state">
+                    <div class="empty-icon">📦</div>
+                    <p>Chưa có phần tử nào được ẩn cho domain này</p>
+                    <p class="empty-subtitle">Bấm "Bật chế độ chọn" để bắt đầu</p>
+                </div>
+            </section>
+
+            <!-- Cài đặt domain -->
+            <section class="domain-settings">
+                <div class="setting-item">
+                    <label class="setting-label">
+                        <input type="checkbox" id="apply-subdomains" class="setting-checkbox">
+                        <span class="setting-text">Áp dụng cho tất cả subdomain</span>
+                    </label>
+                </div>
+            </section>
+
+            <!-- Nút hành động -->
+            <section class="actions">
+                <div class="action-buttons">
+                    <button id="export-btn" class="btn btn-outline" title="Xuất cấu hình">
+                        <span class="btn-icon">📤</span>
+                        <span class="btn-text">Xuất</span>
+                    </button>
+                    
+                    <button id="import-btn" class="btn btn-outline" title="Nhập cấu hình">
+                        <span class="btn-icon">📥</span>
+                        <span class="btn-text">Nhập</span>
+                    </button>
+                    
+                    <button id="clear-domain-btn" class="btn btn-danger" title="Xóa tất cả rules cho domain này">
+                        <span class="btn-icon">🗑️</span>
+                        <span class="btn-text">Xóa tất cả</span>
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Status bar -->
+        <footer class="status-bar">
+            <div id="status-message" class="status-message"></div>
+        </footer>
+    </div>
+
+    <!-- Hidden file input for import -->
+    <input type="file" id="import-file-input" accept=".json" style="display: none;">
+
+    <!-- Rule item template -->
+    <template id="rule-item-template">
+        <div class="rule-item" data-rule-id="">
+            <div class="rule-content">
+                <div class="rule-header">
+                    <div class="rule-info">
+                        <span class="rule-selector"></span>
+                        <span class="rule-note"></span>
+                    </div>
+                    <div class="rule-controls">
+                        <button class="toggle-rule-btn" title="Bật/Tắt rule">
+                            <span class="toggle-icon">👁️</span>
+                        </button>
+                        <button class="edit-rule-btn" title="Sửa ghi chú">
+                            <span class="edit-icon">✏️</span>
+                        </button>
+                        <button class="delete-rule-btn" title="Xóa rule">
+                            <span class="delete-icon">🗑️</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="rule-details">
+                    <span class="rule-tag"></span>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script src="popup.js"></script>
+</body>
+</html>
