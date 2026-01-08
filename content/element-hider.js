@@ -186,7 +186,18 @@ class ElementHider {
         }
 
         try {
-            const ruleText = `${selector} { display: none !important; }`;
+            // Use multiple properties to ensure hiding works even with Tailwind CSS
+            const ruleText = `${selector} { 
+                display: none !important; 
+                visibility: hidden !important; 
+                opacity: 0 !important; 
+                pointer-events: none !important;
+                position: absolute !important;
+                left: -9999px !important;
+                width: 0 !important;
+                height: 0 !important;
+                overflow: hidden !important;
+            }`;
             
             const existingRules = Array.from(this.styleSheet.cssRules || []);
             const ruleExists = existingRules.some(rule => 

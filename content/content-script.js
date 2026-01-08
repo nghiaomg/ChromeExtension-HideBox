@@ -274,7 +274,21 @@ class HideBoxContentScript {
         const selectorData = this.selectorGenerator.generateSelector(element);
         if (!selectorData.selector) {
             console.warn('HideBox: Could not generate selector for element');
+            this.showNotification('⚠️ Không thể tạo selector cho phần tử này', 'warning');
             return;
+        }
+        
+        // Check how many elements will be affected
+        const affectedElements = document.querySelectorAll(selectorData.selector);
+        const affectedCount = affectedElements.length;
+        
+        // Warn if selector is too broad
+        if (affectedCount > 1) {
+            const confirmed = await this.confirmBroadSelector(affectedCount, selectorData.selector);
+            if (!confirmed) {
+                this.showNotification('❌ Đã hủy - selector quá rộng', 'warning');
+                return;
+            }
         }
         
         const rule = {
@@ -284,7 +298,8 @@ class HideBoxContentScript {
             fallbacks: selectorData.fallbacks,
             note: this.generateElementNote(element),
             enabled: true,
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            affectedCount: affectedCount
         };
         
         await this.saveRuleToStorage(rule);
@@ -299,8 +314,150 @@ class HideBoxContentScript {
             rule: rule
         });
         
+        const countMsg = affectedCount > 1 ? ` (${affectedCount} phần tử)` : '';
         console.log('HideBox: Selected and saved element:', rule.selector);
-        this.showNotification(`Đã ẩn và lưu: ${rule.note}`);
+        this.showNotification(`✅ Đã ẩn và lưu${countMsg}: ${rule.note}`, 'success');
+    }
+
+    /**
+     * Confirm if user wants to use a broad selector
+     */
+    async confirmBroadSelector(count, selector) {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'hidebox-confirm-modal';
+            modal.innerHTML = `
+                <div class="hidebox-confirm-content">
+                    <div class="hidebox-confirm-icon">⚠️</div>
+                    <div class="hidebox-confirm-title">Selector sẽ ảnh hưởng ${count} phần tử</div>
+                    <div class="hidebox-confirm-message">
+                        Selector: <code>${this.escapeHtml(selector)}</code>
+                        <br><br>
+                        Có thể ẩn nhiều phần tử không mong muốn. Bạn có chắc muốn tiếp tục?
+                    </div>
+                    <div class="hidebox-confirm-buttons">
+                        <button class="hidebox-confirm-btn hidebox-confirm-cancel">❌ Hủy</button>
+                        <button class="hidebox-confirm-btn hidebox-confirm-ok">✅ Tiếp tục</button>
+                    </div>
+                </div>
+            `;
+            
+            // Add styles
+            const style = document.createElement('style');
+            style.textContent = `
+                .hidebox-confirm-modal {
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    width: 100% !important;
+                    height: 100% !important;
+                    background: rgba(0, 0, 0, 0.7) !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    z-index: 2147483647 !important;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+                }
+                .hidebox-confirm-content {
+                    background: white !important;
+                    border-radius: 12px !important;
+                    padding: 24px !important;
+                    max-width: 500px !important;
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+                    text-align: center !important;
+                }
+                .hidebox-confirm-icon {
+                    font-size: 48px !important;
+                    margin-bottom: 16px !important;
+                }
+                .hidebox-confirm-title {
+                    font-size: 20px !important;
+                    font-weight: 600 !important;
+                    color: #dc3545 !important;
+                    margin-bottom: 12px !important;
+                }
+                .hidebox-confirm-message {
+                    font-size: 14px !important;
+                    color: #333 !important;
+                    line-height: 1.6 !important;
+                    margin-bottom: 20px !important;
+                }
+                .hidebox-confirm-message code {
+                    background: #f5f5f5 !important;
+                    padding: 2px 6px !important;
+                    border-radius: 3px !important;
+                    font-family: monospace !important;
+                    font-size: 12px !important;
+                    color: #dc3545 !important;
+                    word-break: break-all !important;
+                }
+                .hidebox-confirm-buttons {
+                    display: flex !important;
+                    gap: 12px !important;
+                    justify-content: center !important;
+                }
+                .hidebox-confirm-btn {
+                    padding: 10px 24px !important;
+                    border: none !important;
+                    border-radius: 6px !important;
+                    font-size: 14px !important;
+                    font-weight: 500 !important;
+                    cursor: pointer !important;
+                    transition: all 0.2s !important;
+                }
+                .hidebox-confirm-cancel {
+                    background: #6c757d !important;
+                    color: white !important;
+                }
+                .hidebox-confirm-cancel:hover {
+                    background: #5a6268 !important;
+                }
+                .hidebox-confirm-ok {
+                    background: #dc3545 !important;
+                    color: white !important;
+                }
+                .hidebox-confirm-ok:hover {
+                    background: #c82333 !important;
+                }
+            `;
+            
+            document.head.appendChild(style);
+            document.body.appendChild(modal);
+            
+            const cleanup = () => {
+                modal.remove();
+                style.remove();
+            };
+            
+            modal.querySelector('.hidebox-confirm-cancel').addEventListener('click', () => {
+                cleanup();
+                resolve(false);
+            });
+            
+            modal.querySelector('.hidebox-confirm-ok').addEventListener('click', () => {
+                cleanup();
+                resolve(true);
+            });
+            
+            // ESC to cancel
+            const escHandler = (e) => {
+                if (e.key === 'Escape') {
+                    cleanup();
+                    document.removeEventListener('keydown', escHandler);
+                    resolve(false);
+                }
+            };
+            document.addEventListener('keydown', escHandler);
+        });
+    }
+
+    /**
+     * Escape HTML for safe display
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     handleIframeClick(iframe, event) {
@@ -725,13 +882,14 @@ class HideBoxContentScript {
         console.log('HideBox: Restored iframe interactions');
     }
 
-    showNotification(message) {
+    showNotification(message, type = 'success') {
         const notification = document.createElement('div');
+        const bgColor = type === 'warning' ? '#ffc107' : type === 'error' ? '#dc3545' : '#28a745';
         notification.style.cssText = `
             position: fixed !important;
             top: 20px !important;
             right: 20px !important;
-            background: #28a745 !important;
+            background: ${bgColor} !important;
             color: white !important;
             padding: 12px 16px !important;
             border-radius: 6px !important;
@@ -739,6 +897,8 @@ class HideBoxContentScript {
             font-size: 14px !important;
             z-index: 2147483647 !important;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+            max-width: 350px !important;
+            word-wrap: break-word !important;
         `;
         notification.textContent = message;
         document.body.appendChild(notification);

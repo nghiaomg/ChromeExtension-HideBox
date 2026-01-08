@@ -146,10 +146,24 @@ class SelectorGenerator {
         
         for (const combination of combinations) {
             const classSelector = combination.map(cls => `.${this.escapeSelector(cls)}`).join('');
-            const selector = tagName + classSelector;
+            let selector = tagName + classSelector;
             
-            const matches = document.querySelectorAll(selector);
-            if (matches.length > 0 && matches.length <= 5) { // Not too many matches
+            let matches = document.querySelectorAll(selector);
+            
+            // If too many matches, try to make it more specific with parent context
+            if (matches.length > 1) {
+                const specificSelector = this.makeMoreSpecific(element, selector);
+                if (specificSelector !== selector) {
+                    const specificMatches = document.querySelectorAll(specificSelector);
+                    if (specificMatches.length > 0 && specificMatches.length <= matches.length) {
+                        selector = specificSelector;
+                        matches = specificMatches;
+                    }
+                }
+            }
+            
+            // Only accept if unique or very few matches
+            if (matches.length > 0 && matches.length <= 1) {
                 // Check if our element is in the matches
                 if (Array.from(matches).includes(element)) {
                     const confidence = this.calculateClassConfidence(combination, matches.length);
@@ -303,14 +317,61 @@ class SelectorGenerator {
     }
 
     /**
+     * Make selector more specific by adding parent context
+     */
+    makeMoreSpecific(element, baseSelector) {
+        const parent = element.parentElement;
+        if (!parent || parent === document.body) {
+            return baseSelector;
+        }
+
+        // Try adding parent tag
+        const parentTag = parent.tagName.toLowerCase();
+        let parentSelector = parentTag;
+
+        // Add parent ID if available
+        if (parent.id && !this.isDynamicValue(parent.id)) {
+            parentSelector = `#${this.escapeSelector(parent.id)}`;
+            return `${parentSelector} > ${baseSelector}`;
+        }
+
+        // Add parent classes (max 2 most specific)
+        const parentClasses = Array.from(parent.classList)
+            .filter(cls => !this.isDynamicClass(cls))
+            .slice(0, 2);
+
+        if (parentClasses.length > 0) {
+            const classSelector = parentClasses.map(cls => `.${this.escapeSelector(cls)}`).join('');
+            parentSelector = parentTag + classSelector;
+        }
+
+        // Add nth-child for more specificity
+        const siblings = Array.from(parent.children);
+        const index = siblings.indexOf(element) + 1;
+        
+        if (index > 0) {
+            return `${parentSelector} > ${baseSelector}:nth-child(${index})`;
+        }
+
+        return `${parentSelector} > ${baseSelector}`;
+    }
+
+    /**
      * Generate different combinations of classes for testing
      */
     generateClassCombinations(classes) {
         const combinations = [];
         
-        // Single classes
-        for (const cls of classes) {
-            combinations.push([cls]);
+        // All classes first (most specific)
+        if (classes.length <= 5) {
+            combinations.push(classes);
+        }
+        
+        // Triplets of classes
+        if (classes.length >= 3) {
+            for (let i = 0; i < classes.length - 2; i++) {
+                combinations.push([classes[i], classes[i + 1], classes[i + 2]]);
+            }
         }
         
         // Pairs of classes
@@ -320,9 +381,9 @@ class SelectorGenerator {
             }
         }
         
-        // All classes (if not too many)
-        if (classes.length <= 4) {
-            combinations.push(classes);
+        // Single classes (least specific, last resort)
+        for (const cls of classes) {
+            combinations.push([cls]);
         }
         
         return combinations;

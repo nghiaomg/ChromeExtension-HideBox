@@ -8,7 +8,12 @@
     "activeTab",
     "scripting",
     "storage",
-    "tabs"
+    "tabs",
+    "alarms"
+  ],
+  
+  "host_permissions": [
+    "<all_urls>"
   ],
   
   "action": {
@@ -38,7 +43,8 @@
       "matches": ["<all_urls>"],
       "js": ["content/selector-generator.js", "content/element-hider.js", "content/content-script.js"],
       "css": ["content/overlay.css"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "all_frames": false
     }
   ],
   

@@ -31,10 +31,12 @@ class HideBoxBackground {
             this.handleStorageChanged(changes, namespace);
         });
 
-        // Alarm for snooze cleanup
-        chrome.alarms.onAlarm.addListener((alarm) => {
-            this.handleAlarm(alarm);
-        });
+        // Alarm for snooze cleanup (optional)
+        if (chrome.alarms) {
+            chrome.alarms.onAlarm.addListener((alarm) => {
+                this.handleAlarm(alarm);
+            });
+        }
     }
 
     async handleInstalled(details) {
@@ -263,9 +265,12 @@ class HideBoxBackground {
                 minutes: minutes
             });
 
-            chrome.alarms.create(`snooze-${domain}`, { 
-                when: until 
-            });
+            // Create alarm if API is available
+            if (chrome.alarms) {
+                chrome.alarms.create(`snooze-${domain}`, { 
+                    when: until 
+                });
+            }
 
             console.log(`HideBox: Domain ${domain} snoozed for ${minutes} minutes`);
         } catch (error) {

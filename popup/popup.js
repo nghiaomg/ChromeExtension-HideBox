@@ -5,7 +5,7 @@ class HideBoxPopup {
         this.domainRules = [];
         this.isSelectionMode = false;
         this.snoozeTimeout = null;
-        
+
         this.initializeElements();
         this.attachEventListeners();
         this.loadCurrentDomain();
@@ -16,25 +16,25 @@ class HideBoxPopup {
         this.toggleSelectionBtn = document.getElementById('toggle-selection');
         this.snoozeBtn = document.getElementById('snooze-btn');
         this.snoozeDropdown = document.getElementById('snooze-dropdown');
-        
+
         // Rules list
         this.rulesList = document.getElementById('rules-list');
         this.emptyState = document.getElementById('empty-state');
         this.ruleCount = document.getElementById('rule-count');
-        
+
         // Domain settings
         this.applySubdomainsCheckbox = document.getElementById('apply-subdomains');
         this.currentDomainSpan = document.getElementById('current-domain');
-        
+
         // Action buttons
         this.exportBtn = document.getElementById('export-btn');
         this.importBtn = document.getElementById('import-btn');
         this.clearDomainBtn = document.getElementById('clear-domain-btn');
         this.importFileInput = document.getElementById('import-file-input');
-        
+
         // Status
         this.statusMessage = document.getElementById('status-message');
-        
+
         // Template
         this.ruleItemTemplate = document.getElementById('rule-item-template');
     }
@@ -103,7 +103,7 @@ class HideBoxPopup {
                 const url = new URL(tab.url);
                 this.currentDomain = url.hostname;
                 this.currentDomainSpan.textContent = this.currentDomain;
-                
+
                 await this.loadDomainData();
                 await this.checkSelectionMode();
             }
@@ -125,7 +125,7 @@ class HideBoxPopup {
 
             this.domainRules = domainData.rules || [];
             this.applySubdomainsCheckbox.checked = domainData.applyToSubdomains || false;
-            
+
             this.renderRulesList();
             this.updateRuleCount();
         } catch (error) {
@@ -138,7 +138,7 @@ class HideBoxPopup {
         try {
             const result = await chrome.storage.sync.get(['domains']);
             const domains = result.domains || {};
-            
+
             domains[this.currentDomain] = {
                 applyToSubdomains: this.applySubdomainsCheckbox.checked,
                 rules: this.domainRules,
@@ -146,7 +146,7 @@ class HideBoxPopup {
             };
 
             await chrome.storage.sync.set({ domains });
-            
+
             // Notify content script to update rules
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             if (tab?.id) {
@@ -168,56 +168,92 @@ class HideBoxPopup {
     async toggleSelectionMode() {
         try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (!tab?.id) return;
+            if (!tab?.id) {
+                this.showStatus('Không tìm thấy tab hiện tại', 'error');
+                return;
+            }
+
+            // Check if tab URL is valid
+            if (!tab.url || (!tab.url.startsWith('http://') && !tab.url.startsWith('https://'))) {
+                this.showStatus('Extension không hoạt động trên trang này', 'error');
+                return;
+            }
+
+            // Show loading state
+            this.toggleSelectionBtn.disabled = true;
+            this.showStatus('Đang khởi động chế độ chọn...', 'info');
 
             // Ensure content script is injected before sending message
-            await this.ensureContentScriptReady(tab.id);
+            const isReady = await this.ensureContentScriptReady(tab.id);
+            
+            if (!isReady) {
+                this.showStatus('Không thể kết nối với trang web. Vui lòng tải lại trang.', 'error');
+                this.toggleSelectionBtn.disabled = false;
+                return;
+            }
 
             this.isSelectionMode = !this.isSelectionMode;
-            
+
             const response = await chrome.tabs.sendMessage(tab.id, {
                 action: 'toggleSelectionMode',
                 enabled: this.isSelectionMode
             }).catch(error => {
-                console.warn('Failed to send toggle message:', error);
+                console.error('Failed to send toggle message:', error);
+                this.showStatus('Lỗi khi gửi message đến content script', 'error');
+                this.isSelectionMode = !this.isSelectionMode; // Revert
                 return null;
             });
 
             this.updateSelectionButton();
+            this.toggleSelectionBtn.disabled = false;
+            
+            if (this.isSelectionMode) {
+                this.showStatus('✅ Đã bật chế độ chọn', 'success');
+            } else {
+                this.showStatus('Đã tắt chế độ chọn', 'info');
+            }
         } catch (error) {
             console.error('Error toggling selection mode:', error);
             this.showStatus('Lỗi khi chuyển chế độ chọn', 'error');
+            this.toggleSelectionBtn.disabled = false;
         }
     }
 
-    async ensureContentScriptReady(tabId) {
-        try {
-            // Test if content script is already injected
-            const response = await chrome.tabs.sendMessage(tabId, { action: 'ping' }).catch(() => null);
-            if (response) {
-                return true; // Already ready
+    async ensureContentScriptReady(tabId, retries = 3) {
+        console.log('Checking if content script is ready for tab', tabId);
+        
+        // Try to ping content script first
+        for (let i = 0; i < retries; i++) {
+            try {
+                const response = await chrome.tabs.sendMessage(tabId, { action: 'ping' });
+                if (response && response.pong) {
+                    console.log('Content script is ready');
+                    return true;
+                }
+            } catch (error) {
+                console.log(`Ping attempt ${i + 1} failed:`, error.message);
             }
-        } catch (error) {
-            // Content script not ready, request injection via background
+
+            // If not ready, request injection
+            if (i === 0) {
+                console.log('Content script not ready, requesting injection...');
+                try {
+                    const injectionResponse = await chrome.runtime.sendMessage({
+                        action: 'ensureContentScript',
+                        tabId: tabId
+                    });
+                    console.log('Injection response:', injectionResponse);
+                } catch (error) {
+                    console.error('Failed to request injection:', error);
+                }
+            }
+
+            // Wait before retry
+            await new Promise(resolve => setTimeout(resolve, 300 * (i + 1)));
         }
 
-        // Request background to inject content script
-        try {
-            await chrome.runtime.sendMessage({
-                action: 'ensureContentScript',
-                tabId: tabId
-            });
-            
-            // Wait a bit for injection to complete
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // Test again
-            const response = await chrome.tabs.sendMessage(tabId, { action: 'ping' }).catch(() => null);
-            return !!response;
-        } catch (error) {
-            console.warn('Failed to ensure content script ready:', error);
-            return false;
-        }
+        console.error('Content script failed to become ready after', retries, 'attempts');
+        return false;
     }
 
     async checkSelectionMode() {
@@ -243,7 +279,7 @@ class HideBoxPopup {
     updateSelectionButton() {
         const icon = this.toggleSelectionBtn.querySelector('.btn-icon');
         const text = this.toggleSelectionBtn.querySelector('.btn-text');
-        
+
         if (this.isSelectionMode) {
             icon.textContent = '⏹️';
             text.textContent = 'Tắt chế độ chọn';
@@ -262,13 +298,13 @@ class HideBoxPopup {
     async snoozeDomain(minutes) {
         try {
             const until = Date.now() + (minutes * 60 * 1000);
-            
+
             const result = await chrome.storage.local.get(['snooze']);
             const snooze = result.snooze || {};
             snooze[this.currentDomain] = until;
-            
+
             await chrome.storage.local.set({ snooze });
-            
+
             // Notify content script
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             if (tab?.id) {
@@ -280,7 +316,7 @@ class HideBoxPopup {
                     console.warn('Failed to notify content script about snooze:', error);
                 });
             }
-            
+
             this.showStatus(`Đã tạm ngưng ${minutes} phút cho ${this.currentDomain}`, 'success');
         } catch (error) {
             console.error('Error snoozing domain:', error);
@@ -290,14 +326,14 @@ class HideBoxPopup {
 
     renderRulesList() {
         this.rulesList.innerHTML = '';
-        
+
         if (this.domainRules.length === 0) {
             this.emptyState.style.display = 'block';
             return;
         }
-        
+
         this.emptyState.style.display = 'none';
-        
+
         this.domainRules.forEach((rule, index) => {
             const ruleElement = this.createRuleElement(rule, index);
             this.rulesList.appendChild(ruleElement);
@@ -307,45 +343,45 @@ class HideBoxPopup {
     createRuleElement(rule, index) {
         const template = this.ruleItemTemplate.content.cloneNode(true);
         const ruleElement = template.querySelector('.rule-item');
-        
+
         ruleElement.setAttribute('data-rule-id', rule.id);
         if (!rule.enabled) {
             ruleElement.classList.add('disabled');
         }
-        
+
         // Fill rule information
         const selectorSpan = ruleElement.querySelector('.rule-selector');
         const noteSpan = ruleElement.querySelector('.rule-note');
         const tagSpan = ruleElement.querySelector('.rule-tag');
-        
+
         selectorSpan.textContent = rule.selector;
         noteSpan.textContent = rule.note || 'Không có ghi chú';
         tagSpan.textContent = this.getElementTagFromSelector(rule.selector);
-        
+
         // Set up controls
         const toggleBtn = ruleElement.querySelector('.toggle-rule-btn');
         const editBtn = ruleElement.querySelector('.edit-rule-btn');
         const deleteBtn = ruleElement.querySelector('.delete-rule-btn');
-        
+
         // Toggle button
         const toggleIcon = toggleBtn.querySelector('.toggle-icon');
         toggleIcon.textContent = rule.enabled ? '👁️' : '🙈';
         toggleBtn.title = rule.enabled ? 'Tắt rule' : 'Bật rule';
-        
+
         toggleBtn.addEventListener('click', () => {
             this.toggleRule(rule.id);
         });
-        
+
         // Edit button
         editBtn.addEventListener('click', () => {
             this.editRule(rule.id);
         });
-        
+
         // Delete button
         deleteBtn.addEventListener('click', () => {
             this.deleteRule(rule.id);
         });
-        
+
         return ruleElement;
     }
 
@@ -405,15 +441,15 @@ class HideBoxPopup {
                 exportedAt: new Date().toISOString(),
                 version: chrome.runtime.getManifest().version
             };
-            
+
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
-            
+
             const a = document.createElement('a');
             a.href = url;
             a.download = `hidebox-config-${new Date().toISOString().split('T')[0]}.json`;
             a.click();
-            
+
             URL.revokeObjectURL(url);
             this.showStatus('Đã xuất cấu hình', 'success');
         } catch (error) {
@@ -425,11 +461,11 @@ class HideBoxPopup {
     async importConfiguration(event) {
         const file = event.target.files[0];
         if (!file) return;
-        
+
         try {
             const text = await file.text();
             const data = JSON.parse(text);
-            
+
             if (data.domains && typeof data.domains === 'object') {
                 await chrome.storage.sync.set({ domains: data.domains });
                 await this.loadDomainData();
@@ -441,7 +477,7 @@ class HideBoxPopup {
             console.error('Error importing configuration:', error);
             this.showStatus('Lỗi khi nhập cấu hình', 'error');
         }
-        
+
         // Reset file input
         event.target.value = '';
     }
@@ -490,7 +526,7 @@ class HideBoxPopup {
         // Remove rule from UI
         const originalLength = this.domainRules.length;
         this.domainRules = this.domainRules.filter(rule => rule.selector !== selector);
-        
+
         if (this.domainRules.length < originalLength) {
             this.renderRulesList();
             this.updateRuleCount();
@@ -505,7 +541,7 @@ class HideBoxPopup {
     showStatus(message, type = 'info') {
         this.statusMessage.textContent = message;
         this.statusMessage.className = `status-message ${type}`;
-        
+
         // Clear status after 3 seconds
         setTimeout(() => {
             this.statusMessage.textContent = '';

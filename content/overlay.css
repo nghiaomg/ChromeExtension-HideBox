@@ -205,9 +205,22 @@
     z-index: 1000000 !important;
 }
 
-/* Hidden elements indicator */
+/* Hidden elements indicator - Multiple properties to override Tailwind CSS */
 .hidebox-hidden {
     display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    position: absolute !important;
+    left: -9999px !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    max-height: 0 !important;
+    max-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
 }
 
 .hidebox-hidden-placeholder {
