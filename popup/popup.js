@@ -281,11 +281,11 @@ class HideBoxPopup {
         const text = this.toggleSelectionBtn.querySelector('.btn-text');
 
         if (this.isSelectionMode) {
-            icon.textContent = '⏹️';
+            icon.className = 'btn-icon icon icon-lg icon-stop';
             text.textContent = 'Tắt chế độ chọn';
             this.toggleSelectionBtn.style.background = '#dc3545';
         } else {
-            icon.textContent = '🎯';
+            icon.className = 'btn-icon icon icon-lg icon-target';
             text.textContent = 'Bật chế độ chọn';
             this.toggleSelectionBtn.style.background = '';
         }
@@ -365,7 +365,7 @@ class HideBoxPopup {
 
         // Toggle button
         const toggleIcon = toggleBtn.querySelector('.toggle-icon');
-        toggleIcon.textContent = rule.enabled ? '👁️' : '🙈';
+        toggleIcon.className = rule.enabled ? 'toggle-icon icon icon-eye' : 'toggle-icon icon icon-eye-off';
         toggleBtn.title = rule.enabled ? 'Tắt rule' : 'Bật rule';
 
         toggleBtn.addEventListener('click', () => {

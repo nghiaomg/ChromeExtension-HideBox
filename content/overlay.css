@@ -101,7 +101,9 @@
 }
 
 .hidebox-selection-indicator-icon {
-    font-size: 16px !important;
+    width: 18px !important;
+    height: 18px !important;
+    flex-shrink: 0 !important;
 }
 
 .hidebox-selection-indicator-text {
@@ -189,7 +191,7 @@
 }
 
 .hidebox-iframe-blocker::before {
-    content: '🚫 IFRAME - Click đã chặn' !important;
+    content: 'IFRAME - Click đã chặn' !important;
     position: absolute !important;
     top: 50% !important;
     left: 50% !important;
@@ -203,6 +205,9 @@
     font-weight: 600 !important;
     white-space: nowrap !important;
     z-index: 1000000 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
 }
 
 /* Hidden elements indicator - Multiple properties to override Tailwind CSS */
@@ -245,7 +250,7 @@
 }
 
 .hidebox-hidden-placeholder::before {
-    content: '🙈 Phần tử đã bị ẩn bởi HideBox' !important;
+    content: 'Phần tử đã bị ẩn bởi HideBox' !important;
 }
 
 /* Animations */

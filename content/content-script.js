@@ -274,7 +274,7 @@ class HideBoxContentScript {
         const selectorData = this.selectorGenerator.generateSelector(element);
         if (!selectorData.selector) {
             console.warn('HideBox: Could not generate selector for element');
-            this.showNotification('⚠️ Không thể tạo selector cho phần tử này', 'warning');
+            this.showNotification('Không thể tạo selector cho phần tử này', 'warning');
             return;
         }
         
@@ -286,7 +286,7 @@ class HideBoxContentScript {
         if (affectedCount > 1) {
             const confirmed = await this.confirmBroadSelector(affectedCount, selectorData.selector);
             if (!confirmed) {
-                this.showNotification('❌ Đã hủy - selector quá rộng', 'warning');
+                this.showNotification('Đã hủy - selector quá rộng', 'warning');
                 return;
             }
         }
@@ -316,7 +316,7 @@ class HideBoxContentScript {
         
         const countMsg = affectedCount > 1 ? ` (${affectedCount} phần tử)` : '';
         console.log('HideBox: Selected and saved element:', rule.selector);
-        this.showNotification(`✅ Đã ẩn và lưu${countMsg}: ${rule.note}`, 'success');
+        this.showNotification(`Đã ẩn và lưu${countMsg}: ${rule.note}`, 'success');
     }
 
     /**
@@ -328,7 +328,13 @@ class HideBoxContentScript {
             modal.className = 'hidebox-confirm-modal';
             modal.innerHTML = `
                 <div class="hidebox-confirm-content">
-                    <div class="hidebox-confirm-icon">⚠️</div>
+                    <div class="hidebox-confirm-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#dc3545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 48px; height: 48px;">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                            <line x1="12" y1="9" x2="12" y2="13"/>
+                            <line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                    </div>
                     <div class="hidebox-confirm-title">Selector sẽ ảnh hưởng ${count} phần tử</div>
                     <div class="hidebox-confirm-message">
                         Selector: <code>${this.escapeHtml(selector)}</code>
@@ -336,8 +342,19 @@ class HideBoxContentScript {
                         Có thể ẩn nhiều phần tử không mong muốn. Bạn có chắc muốn tiếp tục?
                     </div>
                     <div class="hidebox-confirm-buttons">
-                        <button class="hidebox-confirm-btn hidebox-confirm-cancel">❌ Hủy</button>
-                        <button class="hidebox-confirm-btn hidebox-confirm-ok">✅ Tiếp tục</button>
+                        <button class="hidebox-confirm-btn hidebox-confirm-cancel">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                            Hủy
+                        </button>
+                        <button class="hidebox-confirm-btn hidebox-confirm-ok">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            Tiếp tục
+                        </button>
                     </div>
                 </div>
             `;
@@ -661,7 +678,11 @@ class HideBoxContentScript {
         this.indicator = document.createElement('div');
         this.indicator.className = 'hidebox-selection-indicator';
         this.indicator.innerHTML = `
-            <span class="hidebox-selection-indicator-icon">🎯</span>
+            <svg class="hidebox-selection-indicator-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <circle cx="12" cy="12" r="6"/>
+                <circle cx="12" cy="12" r="2"/>
+            </svg>
             <span class="hidebox-selection-indicator-text">Chế độ chọn đang bật</span>
         `;
         document.body.appendChild(this.indicator);
@@ -673,7 +694,14 @@ class HideBoxContentScript {
         this.instructions = document.createElement('div');
         this.instructions.className = 'hidebox-instructions';
         this.instructions.innerHTML = `
-            <div class="hidebox-instructions-title">🎯 Hướng dẫn chọn phần tử</div>
+            <div class="hidebox-instructions-title">
+                <svg style="width: 18px; height: 18px; vertical-align: middle; margin-right: 6px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <circle cx="12" cy="12" r="6"/>
+                    <circle cx="12" cy="12" r="2"/>
+                </svg>
+                Hướng dẫn chọn phần tử
+            </div>
             <ul class="hidebox-instructions-list">
                 <li class="hidebox-instructions-item">Click để chọn và lưu phần tử</li>
                 <li class="hidebox-instructions-item"><span class="hidebox-instructions-key">Shift+Click</span> chọn phần tử cha</li>
@@ -681,7 +709,10 @@ class HideBoxContentScript {
                 <li class="hidebox-instructions-item"><span class="hidebox-instructions-key">Ctrl+U</span> hoàn tác • <span class="hidebox-instructions-key">ESC</span> thoát</li>
             </ul>
             <div style="margin-top: 8px; font-size: 11px; opacity: 0.8;">
-                💡 <span class="hidebox-instructions-key">ESC</span> để thoát • 🛡️ Iframe được bảo vệ khỏi redirect
+                <svg style="width: 14px; height: 14px; vertical-align: middle;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                <span class="hidebox-instructions-key">ESC</span> để thoát • Iframe được bảo vệ khỏi redirect
             </div>
         `;
         document.body.appendChild(this.instructions);
@@ -885,6 +916,16 @@ class HideBoxContentScript {
     showNotification(message, type = 'success') {
         const notification = document.createElement('div');
         const bgColor = type === 'warning' ? '#ffc107' : type === 'error' ? '#dc3545' : '#28a745';
+        
+        let icon = '';
+        if (type === 'success') {
+            icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px; vertical-align: middle; margin-right: 6px;"><polyline points="20 6 9 17 4 12"/></svg>';
+        } else if (type === 'warning') {
+            icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px; vertical-align: middle; margin-right: 6px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+        } else if (type === 'error') {
+            icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px; vertical-align: middle; margin-right: 6px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+        }
+        
         notification.style.cssText = `
             position: fixed !important;
             top: 20px !important;
@@ -899,8 +940,10 @@ class HideBoxContentScript {
             box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
             max-width: 350px !important;
             word-wrap: break-word !important;
+            display: flex !important;
+            align-items: center !important;
         `;
-        notification.textContent = message;
+        notification.innerHTML = icon + message;
         document.body.appendChild(notification);
         
         setTimeout(() => {

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HideBox</title>
+    <link rel="stylesheet" href="icons.css">
     <link rel="stylesheet" href="popup.css">
 </head>
 <body>
@@ -11,7 +12,7 @@
         <header class="header">
             <div class="logo">
                 <img src="../icons/icon32.png" alt="HideBox" class="logo-icon">
-                <h1 class="title">HideBox 1.1+1</h1>
+                <h1 class="title">HideBox 1.1+2</h1>
             </div>
             <div class="domain-info">
                 <span id="current-domain" class="domain-text">Đang tải...</span>
@@ -22,13 +23,13 @@
             <!-- Điều khiển chính -->
             <section class="controls">
                 <button id="toggle-selection" class="btn btn-primary">
-                    <span class="btn-icon">🎯</span>
+                    <span class="btn-icon icon icon-lg icon-target"></span>
                     <span class="btn-text">Bật chế độ chọn</span>
                 </button>
                 
                 <div class="control-buttons">
                     <button id="snooze-btn" class="btn btn-secondary" title="Tạm ngưng cho domain này">
-                        <span class="btn-icon">😴</span>
+                        <span class="btn-icon icon icon-lg icon-sleep"></span>
                         <span class="btn-text">Snooze</span>
                     </button>
                     
@@ -54,7 +55,7 @@
                 </div>
                 
                 <div id="empty-state" class="empty-state">
-                    <div class="empty-icon">📦</div>
+                    <div class="empty-icon icon icon-xl icon-box" style="width: 48px; height: 48px; opacity: 0.5; margin: 0 auto 12px;"></div>
                     <p>Chưa có phần tử nào được ẩn cho domain này</p>
                     <p class="empty-subtitle">Bấm "Bật chế độ chọn" để bắt đầu</p>
                 </div>
@@ -74,17 +75,17 @@
             <section class="actions">
                 <div class="action-buttons">
                     <button id="export-btn" class="btn btn-outline" title="Xuất cấu hình">
-                        <span class="btn-icon">📤</span>
+                        <span class="btn-icon icon icon-upload"></span>
                         <span class="btn-text">Xuất</span>
                     </button>
                     
                     <button id="import-btn" class="btn btn-outline" title="Nhập cấu hình">
-                        <span class="btn-icon">📥</span>
+                        <span class="btn-icon icon icon-download"></span>
                         <span class="btn-text">Nhập</span>
                     </button>
                     
                     <button id="clear-domain-btn" class="btn btn-danger" title="Xóa tất cả rules cho domain này">
-                        <span class="btn-icon">🗑️</span>
+                        <span class="btn-icon icon icon-trash"></span>
                         <span class="btn-text">Xóa tất cả</span>
                     </button>
                 </div>
@@ -111,13 +112,13 @@
                     </div>
                     <div class="rule-controls">
                         <button class="toggle-rule-btn" title="Bật/Tắt rule">
-                            <span class="toggle-icon">👁️</span>
+                            <span class="toggle-icon icon icon-eye"></span>
                         </button>
                         <button class="edit-rule-btn" title="Sửa ghi chú">
-                            <span class="edit-icon">✏️</span>
+                            <span class="edit-icon icon icon-edit"></span>
                         </button>
                         <button class="delete-rule-btn" title="Xóa rule">
-                            <span class="delete-icon">🗑️</span>
+                            <span class="delete-icon icon icon-trash"></span>
                         </button>
                     </div>
                 </div>
